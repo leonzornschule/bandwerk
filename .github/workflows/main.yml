@@ -1,0 +1,31 @@
+name: Build macOS
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build-mac -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build
+        run: cmake --build build-mac --config Release -j 3
+
+      - name: Sign ad hoc and pack
+        run: |
+          ART=build-mac/Bandwerk_artefacts/Release
+          codesign --force --deep -s - "$ART/VST3/Bandwerk.vst3"
+          codesign --force --deep -s - "$ART/AU/Bandwerk.component"
+          mkdir dist
+          cp -R "$ART/VST3/Bandwerk.vst3" "$ART/AU/Bandwerk.component" dist/
+          cd dist && zip -r -y ../Bandwerk-mac.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bandwerk-mac
+          path: Bandwerk-mac.zip
